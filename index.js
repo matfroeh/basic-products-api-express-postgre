@@ -1,15 +1,12 @@
 import express from 'express';
-import { getProducts, getProductById, createProduct, updateProduct, deleteProduct } from './crudOperations.js';
+import { getProducts, getProductById, createProduct, updateProduct, deleteProduct } from './controllers/products.js';
+import productsRouter from './routes/productsRouter.js';
 
 const app = express();
 const port = 3000;
 
 app.use(express.json());
 
-app.get('/products', getProducts);
-app.post('/products', createProduct);
-app.get('/products/:id', getProductById);
-app.put('/products/:id', updateProduct);
-app.delete('/products/:id', deleteProduct);
+app.use('/products', productsRouter);
  
 app.listen(port, () => console.log(`Server is running on port ${port}`));
