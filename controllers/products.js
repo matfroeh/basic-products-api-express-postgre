@@ -63,7 +63,7 @@ export const getProductById = async (req, res) => {
       [id]
     );
     await client.end();
-    if (!results.rowCount) return res.json({ message: "Product not found" });
+    if (!results.rowCount) return res.status(404).json({ message: `Product with id ${id} not found` });
     res.status(200).json(results.rows[0]);
   } catch (error) {
     return res.status(400).json({ message: error });
@@ -95,6 +95,7 @@ export const updateProduct = async (req, res) => {
     );
     await client.end();
 
+    if (!results.rowCount) return res.status(404).json({ message: `Product with id ${id} not found` });
     return res.status(200).json(results.rows[0]);
   } catch (error) {
     console.error("Error updating product: ", error);
@@ -109,9 +110,10 @@ export const deleteProduct = async (req, res) => {
       connectionString: process.env.PG_URI,
     });
     await client.connect();
-    await client.query("DELETE FROM products WHERE id = $1;", [id]);
+    const results = await client.query("DELETE FROM products WHERE id = $1;", [id]);
     await client.end();
 
+    if (!results.rowCount) return res.status(404).json({ message: `Product with id ${id} not found` });
     return res.status(200).json({ message: "Product deleted successfully" });
   } catch (error) {
     console.error("Error deleting Product: ", error);
