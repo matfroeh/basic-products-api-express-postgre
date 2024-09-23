@@ -6,7 +6,7 @@ dotenv.config();
 const { Client } = pg;
 
 export const createProduct = async (req, res) => {
-  try { 
+  try {
     const body = await req.body;
     if (!body) return res.status(404).json({ message: "Body is required" });
 
@@ -29,7 +29,7 @@ export const createProduct = async (req, res) => {
 
     return res.status(201).json(results.rows[0]);
   } catch (error) {
-    return res.json({ message: error });
+    return res.status(400).json({ message: error });
   }
 };
 
@@ -43,18 +43,17 @@ export const getProducts = async (req, res) => {
     // console.log(results);
     // Select from the right table
     await client.end();
-    res.statusCode = 200;
-    res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify(results.rows)); // Return the rows array
+
+    return res.status(200).json(results.rows);
   } catch (error) {
-    console.error("Error fetching Products: ", error);
-    returnErrorWithMessage(res);
+    return res.status(400).json({ message: error });
   }
 };
 
 export const getProductById = async (req, res) => {
   try {
-    const id = getResourceId(req.url);
+    const { id } = req.params;
+
     const client = new Client({
       connectionString: process.env.PG_URI,
     });
@@ -64,55 +63,58 @@ export const getProductById = async (req, res) => {
       [id]
     );
     await client.end();
-    if (!results.rowCount)
-      return returnErrorWithMessage(res, 404, "Product not found");
-    res.statusCode = 200;
-    res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify(results.rows[0]));
+    if (!results.rowCount) return res.json({ message: "Product not found" });
+    res.status(200).json(results.rows[0]);
   } catch (error) {
-    console.error("Error fetching Product: ", error);
-    returnErrorWithMessage(res);
+    return res.status(400).json({ message: error });
   }
 };
 
 export const updateProduct = async (req, res) => {
   try {
-    const id = getResourceId(req.url);
-    const body = await processBodyFromRequest(req);
-    if (!body) return returnErrorWithMessage(res, 400, "Body is required");
-    const parsedBody = JSON.parse(body);
+    const { id } = req.params;
+    const body = req.body;
+
+    if (!body) return res.status(404).json({ message: "Body is required" });
+
     const client = new Client({
       connectionString: process.env.PG_URI,
     });
     await client.connect();
     const results = await client.query(
-      "UPDATE products SET title = $1, author = $2, content = $3 WHERE id = $4 RETURNING *;",
-      [parsedBody.title, parsedBody.author, parsedBody.content, id]
+      "UPDATE products SET name = $1, image = $2, description = $3, category = $4, price = $5, stock = $6 WHERE id = $7 RETURNING *;",
+      [
+        body.name,
+        body.image,
+        body.description,
+        body.category,
+        body.price,
+        body.stock,
+        id,
+      ]
     );
     await client.end();
-    res.statusCode = 200;
-    res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify(results.rows[0]));
+
+    return res.status(200).json(results.rows[0]);
   } catch (error) {
     console.error("Error updating product: ", error);
-    returnErrorWithMessage(res);
+    return res.status(400).json({ message: error });
   }
 };
 
 export const deleteProduct = async (req, res) => {
   try {
-    const id = getResourceId(req.url);
+    const { id } = req.params;
     const client = new Client({
       connectionString: process.env.PG_URI,
     });
     await client.connect();
     await client.query("DELETE FROM products WHERE id = $1;", [id]);
     await client.end();
-    res.statusCode = 200;
-    res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify({ message: "Product deleted successfully" }));
+
+    return res.status(200).json({ message: "Product deleted successfully" });
   } catch (error) {
     console.error("Error deleting Product: ", error);
-    returnErrorWithMessage(res);
+    return res.status(400).json({ message: error });
   }
 };
