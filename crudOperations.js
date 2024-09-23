@@ -1,47 +1,45 @@
 import pg from "pg";
-// Import utility functions
-import {
-  getResourceId,
-  processBodyFromRequest,
-  returnErrorWithMessage,
-} from "./utils.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const { Client } = pg;
 
-export const createPost = async (req, res) => {
-  try {
-    const body = await processBodyFromRequest(req); // This utility function gets the body for you
-    if (!body) return returnErrorWithMessage(res, 400, "Body is required");
-    const parsedBody = JSON.parse(body);
-    console.log(parsedBody);
+export const createProduct = async (req, res) => {
+  try { 
+    const body = await req.body;
+    if (!body) return res.status(404).json({ message: "Body is required" });
 
     const client = new Client({
       connectionString: process.env.PG_URI,
     });
     await client.connect();
     const results = await client.query(
-      'INSERT INTO posts (title, author, content) VALUES ($1, $2, $3) RETURNING *;',
-      [parsedBody.title, parsedBody.author, parsedBody.content]
+      "INSERT INTO products (name, image, description, category, price, stock) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;",
+      [
+        body.name,
+        body.image,
+        body.description,
+        body.category,
+        body.price,
+        body.stock,
+      ]
     );
-    console.log(results);
-
     await client.end();
-    res.statusCode = 201;
-    res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify(results.rows[0]));
+
+    return res.status(201).json(results.rows[0]);
   } catch (error) {
-    console.error("Error creating post: ", error);
-    returnErrorWithMessage(res);
+    return res.json({ message: error });
   }
 };
 
-export const getPosts = async (req, res) => {
+export const getProducts = async (req, res) => {
   try {
     const client = new Client({
       connectionString: process.env.PG_URI,
     });
     await client.connect();
-    const results = await client.query("SELECT * FROM posts;");
+    const results = await client.query("SELECT * FROM products;");
     // console.log(results);
     // Select from the right table
     await client.end();
@@ -49,34 +47,35 @@ export const getPosts = async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify(results.rows)); // Return the rows array
   } catch (error) {
-    console.error("Error fetching posts: ", error);
+    console.error("Error fetching Products: ", error);
     returnErrorWithMessage(res);
   }
 };
 
-export const getPostById = async (req, res) => {
+export const getProductById = async (req, res) => {
   try {
     const id = getResourceId(req.url);
     const client = new Client({
       connectionString: process.env.PG_URI,
     });
     await client.connect();
-    const results = await client.query("SELECT * FROM posts WHERE id = $1;", [
-      id,
-    ]);
+    const results = await client.query(
+      "SELECT * FROM products WHERE id = $1;",
+      [id]
+    );
     await client.end();
     if (!results.rowCount)
-      return returnErrorWithMessage(res, 404, "Post not found");
+      return returnErrorWithMessage(res, 404, "Product not found");
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify(results.rows[0]));
   } catch (error) {
-    console.error("Error fetching post: ", error);
+    console.error("Error fetching Product: ", error);
     returnErrorWithMessage(res);
   }
 };
 
-export const updatePost = async (req, res) => {
+export const updateProduct = async (req, res) => {
   try {
     const id = getResourceId(req.url);
     const body = await processBodyFromRequest(req);
@@ -87,7 +86,7 @@ export const updatePost = async (req, res) => {
     });
     await client.connect();
     const results = await client.query(
-      "UPDATE posts SET title = $1, author = $2, content = $3 WHERE id = $4 RETURNING *;",
+      "UPDATE products SET title = $1, author = $2, content = $3 WHERE id = $4 RETURNING *;",
       [parsedBody.title, parsedBody.author, parsedBody.content, id]
     );
     await client.end();
@@ -95,25 +94,25 @@ export const updatePost = async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify(results.rows[0]));
   } catch (error) {
-    console.error("Error updating post: ", error);
+    console.error("Error updating product: ", error);
     returnErrorWithMessage(res);
   }
 };
 
-export const deletePost = async (req, res) => {
+export const deleteProduct = async (req, res) => {
   try {
     const id = getResourceId(req.url);
     const client = new Client({
       connectionString: process.env.PG_URI,
     });
     await client.connect();
-    await client.query("DELETE FROM posts WHERE id = $1;", [id]);
+    await client.query("DELETE FROM products WHERE id = $1;", [id]);
     await client.end();
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify({ message: "Post deleted successfully" }));
+    res.end(JSON.stringify({ message: "Product deleted successfully" }));
   } catch (error) {
-    console.error("Error deleting post: ", error);
+    console.error("Error deleting Product: ", error);
     returnErrorWithMessage(res);
   }
 };
